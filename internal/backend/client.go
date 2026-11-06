@@ -275,7 +275,7 @@ func ParseLoopbackURL(raw string) (*url.URL, error) {
 		return nil, errors.New("backend URL must not contain credentials")
 	}
 	if u.Host == "" {
-		return nil, errors.New("backend URL must include a host and port")
+		return nil, errors.New("backend URL must include a host")
 	}
 	if u.RawQuery != "" || u.Fragment != "" {
 		return nil, errors.New("backend URL must not contain a query or fragment")
