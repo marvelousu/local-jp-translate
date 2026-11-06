@@ -1,0 +1,9 @@
+/bin/
+/dist/
+/models/
+/runtime/
+/evidence/
+*.log
+*.tmp
+.env
+.DS_Store

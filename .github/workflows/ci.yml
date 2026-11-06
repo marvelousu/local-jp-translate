@@ -1,0 +1,93 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+env:
+  GOTOOLCHAIN: local
+
+jobs:
+  test:
+    name: test (${{ matrix.os }} / ${{ matrix.arch }})
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            arch: amd64
+          - os: windows-latest
+            arch: amd64
+          - os: macos-15
+            arch: arm64
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.23.x"
+          check-latest: false
+          cache: true
+
+      - name: Check native target
+        shell: bash
+        run: |
+          test "$(go env GOARCH)" = "${{ matrix.arch }}"
+          go env GOOS GOARCH
+
+      - name: gofmt
+        shell: bash
+        run: |
+          unformatted="$(gofmt -l .)"
+          if [ -n "$unformatted" ]; then
+            echo "These files need gofmt:"
+            echo "$unformatted"
+            exit 1
+          fi
+
+      - name: go vet
+        run: go vet ./...
+
+      - name: go test
+        run: go test ./...
+
+      - name: go build
+        run: go build ./...
+
+      - name: Cross-build release binaries
+        if: matrix.os == 'ubuntu-latest'
+        shell: bash
+        run: |
+          bash ./scripts/build.sh --all
+          ls -l dist
+
+  package:
+    name: package (cross-built archives)
+    runs-on: ubuntu-latest
+    needs: test
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.23.x"
+          check-latest: false
+          cache: true
+
+      - name: Build archives
+        run: |
+          VERSION="${GITHUB_REF_NAME:-dev}" bash ./scripts/package.sh
+          ls -l dist
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: local-jp-translate-dist
+          path: |
+            dist/*.zip
+            dist/*.tar.gz
+          if-no-files-found: error
