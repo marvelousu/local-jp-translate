@@ -18,18 +18,21 @@
 | 400 | `text_required` | `text` も `q` も指定されていない |
 | 400 | `ambiguous_text` | `text` と `q` が両方あり、値が異なる |
 | 400 | `text_too_long`, `context_too_long` | 入力が設定した上限を超えている |
+| 400 | `invalid_text`, `invalid_context` | 入力または文脈が UTF-8 として不正 |
 | 400 | `invalid_source_language`, `invalid_target_language` | 未対応の言語コード |
 | 400 | `invalid_style`, `style_target_mismatch` | `style` が polite/plain/default 以外、または翻訳先が日本語ではない |
 | 400 | `invalid_glossary` | 用語集が空、大きすぎる、または項目数が多すぎる |
 | 400 | `reserved_token` | 入力に予約済みの PFML マーカーが含まれる |
 | 400 | `invalid_max_tokens` | `max_tokens` が 1..2048 の範囲外 |
 | 400 | `unsupported_messages`, `stream_unsupported`, `stop_unsupported`, `model_unsupported`, `invalid_temperature` | 未対応の chat-completions 形式 |
-| 403 | `invalid_host`, `nonlocal_peer`, `origin_denied` | loopback 以外の接続、または許可していないブラウザオリジン |
+| 403 | `invalid_host`, `nonlocal_peer`, `origin_denied`, `method_denied`, `header_denied` | loopback 以外の接続、許可していないブラウザオリジン、または CORS プリフライトの不正なメソッド/ヘッダー |
 | 404 | `not_found` | 不明なパス |
 | 405 | `method_not_allowed` | HTTP メソッドが違う |
 | 413 | `payload_too_large` | 本文が上限（既定 1 MiB）を超えている |
+| 413 | `context_window_exceeded` | 入力と生成トークン数がモデルのコンテキスト長を超えている |
 | 415 | `content_type` | POST の `Content-Type` が `application/json` ではない |
 | 429 | `overloaded` | 待機キューが満杯。時間をおいて再試行する |
+| 500 | `internal_error` | サーバー内部の予期しないエラー |
 | 502 | `backend_truncated` | 生成が `max_tokens` に達した。途中までの本文は返さない |
 | 502 | `backend_empty` | モデルが空のテキストを返した |
 | 502 | `backend_malformed` | 上流の JSON またはレスポンス形式が不正 |
@@ -37,6 +40,7 @@
 | 502 | `unsafe_output` | 出力に予約済みの PFML マーカーが含まれる |
 | 502 | `backend_error` | 上流の HTTP または通信に失敗した |
 | 503 | `not_ready` | llama-server の準備ができていない |
+| 503 | `service_unavailable`, `backend_not_configured` | 翻訳サービスまたは推論バックエンドが設定されていない |
 | 504 | `request_timeout` | 推論スロットの待機がタイムアウトした |
 | 504 | `upstream_timeout` | 翻訳がタイムアウトした |
 
@@ -58,6 +62,10 @@
 | `max_tokens` | integer | いいえ | `512` | 1..2048 |
 
 `text` と `q` を両方送る場合は同じ値にしてください。異なる場合は曖昧なリクエストとして拒否されます。
+
+言語コードは大文字小文字と `_` / `-` の違いを正規化します。`JA` は `ja`、`zh-Hans` と `zh_CN` は `zh-hans`、`zh_TW` は `zh-hant` として扱います。`pt` などモデルの非対応言語は拒否します。
+
+入力のバイト数上限と、モデルのトークン数上限は別です。コンテキスト長には原文・文脈・用語集と生成する訳文が含まれます。`context_window_exceeded` の場合は入力や `max_tokens` を減らすか、管理モードの `--llama-context`（外部起動では `llama-server -c`）を増やしてください。
 
 ### レスポンス 200
 
@@ -96,7 +104,7 @@ curl -s http://127.0.0.1:8787/translate \
 
 ```json
 {
-  "model": "plamo-3-translate",
+  "model": "plamo-3-translate-0.8b-Q4_K_M",
   "messages": [{"role": "user", "content": "Hello."}],
   "source_lang": "en",
   "target_lang": "ja",
@@ -113,7 +121,7 @@ curl -s http://127.0.0.1:8787/translate \
 - `temperature` は 0 または省略にします。
 - `source_lang` は任意です。`target_lang` の既定値は `ja` です。
 - 翻訳は固定の stop マーカーを使うため、独自の `stop` は拒否されます。
-- `model` を指定する場合は、`/ready` が返す設定済みモデル名と一致させます。
+- `model` を指定する場合は、`/ready` が返す設定済みモデル名と一致させます。`--model-name` を指定した場合は、その値が必須のモデル ID になります。
 - トークン数の集計を行わないため、`usage` は返しません。
 
 ### レスポンス 200
@@ -201,7 +209,7 @@ nl, pa, pl, ru, si, sk, sl, sr, sw, ta, te, th, tl, ur, uz, vi`.
 | `--model` | なし | GGUF モデルのパス。`--llama-server` を指定したときは必須で、単独では指定できない |
 | `--llama-host` | `127.0.0.1` | 管理する `llama-server` の待ち受けホスト。loopback のみ |
 | `--llama-port` | `8788` | 管理する `llama-server` のポート |
-| `--llama-context` | `4096` | 管理する `llama-server` のコンテキスト長（256..32768） |
+| `--llama-context` | `16384` | 管理する `llama-server` のコンテキスト長（256..32768） |
 | `--llama-alias` | `plamo-3-translate` | 管理する `llama-server` のモデル別名 |
 | `--llama-arg` | なし | `llama-server` に渡す追加引数。繰り返し指定でき、1フラグにつき1引数 |
 | `--startup-timeout` | `180s` | 管理する `llama-server` の起動待ち時間 |

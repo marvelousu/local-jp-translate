@@ -27,13 +27,17 @@ const LicenseURL = "https://huggingface.co/" + Repository + "/blob/" + Revision 
 // Download verifies an existing model or installs the immutable official model.
 // The caller must present model license terms before starting a download.
 func Download(ctx context.Context, directory string) (string, error) {
-	client := &http.Client{Transport: &http.Transport{ResponseHeaderTimeout: 30 * time.Second}, CheckRedirect: func(req *http.Request, via []*http.Request) error {
+	client := &http.Client{Transport: downloadTransport(), CheckRedirect: func(req *http.Request, via []*http.Request) error {
 		if len(via) >= 8 || req.URL.Scheme != "https" || req.URL.User != nil {
 			return errors.New("refusing unsafe model download redirect")
 		}
 		return nil
 	}}
 	return install(ctx, directory, URL, Filename, Size, SHA256, client)
+}
+
+func downloadTransport() *http.Transport {
+	return &http.Transport{Proxy: http.ProxyFromEnvironment, ResponseHeaderTimeout: 30 * time.Second}
 }
 
 func verify(path string, size int64, digest string) error {

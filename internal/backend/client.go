@@ -233,27 +233,28 @@ func truncate(s string, n int) string {
 }
 
 func cleanOutput(text string) (string, error) {
-	trimmed := strings.TrimRightFunc(text, unicode.IsSpace)
+	cleaned := text
 	for {
 		changed := false
+		suffix := strings.TrimRightFunc(cleaned, unicode.IsSpace)
 		for _, stop := range plamo.StopMarkers {
-			if strings.HasSuffix(trimmed, stop) {
-				trimmed = strings.TrimRightFunc(strings.TrimSuffix(trimmed, stop), unicode.IsSpace)
+			if strings.HasSuffix(suffix, stop) {
+				cleaned = strings.TrimSuffix(suffix, stop)
 				changed = true
+				break
 			}
 		}
 		if !changed {
 			break
 		}
 	}
-	trimmed = strings.TrimSpace(trimmed)
-	if trimmed == "" {
+	if strings.TrimSpace(cleaned) == "" {
 		return "", ErrEmpty
 	}
-	if strings.Contains(trimmed, plamo.Reserved) {
+	if strings.Contains(cleaned, plamo.Reserved) {
 		return "", ErrUnsafeOutput
 	}
-	return trimmed, nil
+	return cleaned, nil
 }
 
 // ParseLoopbackURL validates that raw points at http(s) on a loopback host and

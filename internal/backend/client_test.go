@@ -45,7 +45,7 @@ func TestCompleteSendsOfficialRequest(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Complete: %v", err)
 	}
-	if result.Text != "こんにちは" {
+	if result.Text != "こんにちは\n" {
 		t.Fatalf("text = %q", result.Text)
 	}
 	if result.CompletionTokens != 3 {
@@ -110,7 +110,7 @@ func TestCompleteStripsTrailingStopMarkers(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Complete: %v", err)
 	}
-	if result.Text != "訳文" {
+	if result.Text != "訳文\n" {
 		t.Fatalf("text = %q", result.Text)
 	}
 }

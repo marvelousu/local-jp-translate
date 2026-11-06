@@ -23,6 +23,8 @@ import (
 
 const defaultModelName = "plamo-3-translate-0.8b-Q4_K_M"
 
+const defaultLlamaContext = 16384
+
 func runServe(args []string) error {
 	signalCtx, stopSignals := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stopSignals()
@@ -39,7 +41,7 @@ func serveWithContext(ctx context.Context, args []string) error {
 	modelPath := fs.String("model", "", "GGUF model path (required with --llama-server)")
 	llamaHost := fs.String("llama-host", "127.0.0.1", "managed llama-server loopback host")
 	llamaPort := fs.Int("llama-port", 8788, "managed llama-server port")
-	llamaContext := fs.Int("llama-context", 4096, "managed llama-server context size (256..32768)")
+	llamaContext := fs.Int("llama-context", defaultLlamaContext, "managed llama-server context size (256..32768)")
 	llamaAlias := fs.String("llama-alias", "plamo-3-translate", "managed llama-server model alias")
 	startupTimeout := fs.Duration("startup-timeout", 180*time.Second, "managed llama-server readiness timeout")
 	requestTimeout := fs.Duration("request-timeout", 180*time.Second, "per-translation timeout including queue wait")
