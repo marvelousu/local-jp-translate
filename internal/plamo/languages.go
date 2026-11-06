@@ -1,6 +1,22 @@
 package plamo
 
-import "sort"
+import (
+	"sort"
+	"strings"
+)
+
+// NormalizeLanguage accepts casing and common Chinese locale spellings while
+// keeping the model's language codes separate from caller locale filenames.
+func NormalizeLanguage(code string) string {
+	code = strings.ToLower(strings.ReplaceAll(strings.TrimSpace(code), "_", "-"))
+	switch code {
+	case "zh-cn", "zh-sg":
+		return "zh-hans"
+	case "zh-tw", "zh-hk":
+		return "zh-hant"
+	}
+	return code
+}
 
 // Language is a model language code and its Japanese display name.
 type Language struct {

@@ -10,8 +10,10 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"os/signal"
 	"path/filepath"
 	"strings"
+	"syscall"
 	"time"
 
 	"github.com/marvelousu/local-jp-translate/internal/modelstore"
@@ -105,6 +107,12 @@ func runModelVerify(args []string) error {
 }
 
 func runModelDownload(args []string) error {
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
+	return runModelDownloadContext(ctx, args, modelstore.Download)
+}
+
+func runModelDownloadContext(ctx context.Context, args []string, download func(context.Context, string) (string, error)) error {
 	fs := flag.NewFlagSet("model download", flag.ContinueOnError)
 	fs.SetOutput(os.Stderr)
 	dir := fs.String("dir", "models", "destination directory")
@@ -134,9 +142,9 @@ does not register you and does not grant commercial rights.
 	}
 
 	fmt.Fprintf(os.Stderr, "Built with PLaMo 3 Translate. Model license: %s\n", modelstore.LicenseURL)
-	ctx, cancel := context.WithTimeout(context.Background(), 6*time.Hour)
+	ctx, cancel := context.WithTimeout(ctx, 6*time.Hour)
 	defer cancel()
-	path, err := modelstore.Download(ctx, *dir)
+	path, err := download(ctx, *dir)
 	if err != nil {
 		return fmt.Errorf("download model: %w", err)
 	}

@@ -11,11 +11,25 @@ OUT_DIR="$(cd "$OUT_DIR" && pwd)"
 export OUT_DIR
 safe_version="$(printf '%s' "$VERSION" | sed 's/[^A-Za-z0-9._-]/-/g')"
 
+sha256_hex() {
+  local line
+  if command -v sha256sum >/dev/null 2>&1; then
+    line="$(sha256sum "$1")" || return 1
+  elif command -v shasum >/dev/null 2>&1; then
+    line="$(shasum -a 256 "$1")" || return 1
+  else
+    echo 'sha256sum or shasum is required' >&2
+    return 1
+  fi
+  printf '%s' "${line%% *}"
+}
+
 bash ./scripts/build.sh --all
 
 stage_root="$(mktemp -d "${TMPDIR:-/tmp}/jptranslate-package.XXXXXX")"
 trap 'rm -rf "$stage_root"' EXIT
 
+archives=()
 for target in windows/amd64 linux/amd64 darwin/arm64; do
   os="${target%/*}"
   arch="${target#*/}"
@@ -43,5 +57,14 @@ for target in windows/amd64 linux/amd64 darwin/arm64; do
     rm -f "$archive"
     tar -czf "$archive" -C "$stage_root" "$name"
   fi
+  archives+=("$archive")
   echo "created $archive"
 done
+
+{
+  for archive in "${archives[@]}"; do
+    hash="$(sha256_hex "$archive")" || exit 1
+    printf '%s  %s\n' "$hash" "${archive##*/}"
+  done
+} > "$OUT_DIR/SHA256SUMS.txt"
+echo "created $OUT_DIR/SHA256SUMS.txt"

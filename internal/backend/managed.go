@@ -75,7 +75,7 @@ func StartManaged(ctx context.Context, cfg ManagedConfig) (*Managed, error) {
 		return nil, fmt.Errorf("llama-server port out of range: %d", cfg.Port)
 	}
 	if cfg.ContextSize == 0 {
-		cfg.ContextSize = 4096
+		cfg.ContextSize = 16384
 	}
 	if cfg.ContextSize < 256 || cfg.ContextSize > 32768 {
 		return nil, fmt.Errorf("llama-server context size must be 256..32768: %d", cfg.ContextSize)

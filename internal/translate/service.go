@@ -285,7 +285,7 @@ func (s *Service) validate(req Request) (Request, error) {
 		return Request{}, validationError("text_too_long", fmt.Sprintf("text exceeds %d bytes", s.cfg.MaxTextBytes))
 	}
 
-	target := strings.TrimSpace(req.Target)
+	target := plamo.NormalizeLanguage(req.Target)
 	if target == "" {
 		target = "ja"
 	}
@@ -293,7 +293,7 @@ func (s *Service) validate(req Request) (Request, error) {
 		return Request{}, validationError("invalid_target_language", "unsupported target language: "+target)
 	}
 
-	source := strings.TrimSpace(req.Source)
+	source := plamo.NormalizeLanguage(req.Source)
 	if source == "auto" {
 		source = ""
 	}
@@ -369,6 +369,11 @@ func mapBackendError(err error) *Error {
 	}
 	var httpErr *backend.HTTPError
 	if errors.As(err, &httpErr) {
+		message := strings.ToLower(httpErr.Body)
+		if httpErr.StatusCode == http.StatusBadRequest && strings.Contains(message, "context") &&
+			(strings.Contains(message, "exceed") || strings.Contains(message, "too long") || strings.Contains(message, "too large")) {
+			return &Error{Code: "context_window_exceeded", Message: "input and requested output exceed the model context window; shorten text, context or glossary, reduce max_tokens, or increase --llama-context (external llama-server: -c)", Status: http.StatusRequestEntityTooLarge}
+		}
 		return &Error{Code: "backend_error", Message: fmt.Sprintf("model backend returned HTTP %d", httpErr.StatusCode), Status: http.StatusBadGateway}
 	}
 	return &Error{Code: "backend_error", Message: "model backend request failed", Status: http.StatusBadGateway}

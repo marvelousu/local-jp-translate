@@ -1,12 +1,15 @@
 package main
 
 import (
+	"context"
 	"crypto/sha256"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 )
 
 func TestModelDownloadRequiresExplicitAcknowledgement(t *testing.T) {
@@ -22,6 +25,36 @@ func TestModelDownloadRequiresExplicitAcknowledgement(t *testing.T) {
 		t.Fatal(readErr)
 	} else if len(entries) != 0 {
 		t.Fatalf("download started without acknowledgement: %v", entries)
+	}
+}
+
+func TestModelDownloadPassesCancellableContext(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	dir := t.TempDir()
+	started := make(chan struct{})
+	download := func(gotCtx context.Context, gotDir string) (string, error) {
+		if gotDir != dir {
+			t.Errorf("download dir = %q, want %q", gotDir, dir)
+		}
+		deadline, ok := gotCtx.Deadline()
+		if !ok {
+			t.Error("download context has no deadline")
+		} else if remaining := time.Until(deadline); remaining <= 5*time.Hour || remaining > 6*time.Hour+time.Minute {
+			t.Errorf("download deadline remaining = %v, want about 6h", remaining)
+		}
+		close(started)
+		<-gotCtx.Done()
+		return "", gotCtx.Err()
+	}
+	go func() {
+		<-started
+		cancel()
+	}()
+
+	err := runModelDownloadContext(ctx, []string{"--dir", dir, "--acknowledge-license"}, download)
+	if !errors.Is(err, context.Canceled) {
+		t.Fatalf("err = %v, want context canceled", err)
 	}
 }
 

@@ -10,6 +10,7 @@ Push-Location $root
 try {
     $safeVersion = [regex]::Replace($Version, '[^A-Za-z0-9._-]', '-')
     & (Join-Path $PSScriptRoot "build.ps1") -Version $Version -OutDir $OutDir -Go $Go -All
+    $archives = @()
 
     $stageRoot = Join-Path $OutDir ("stage-" + [guid]::NewGuid().ToString("N"))
     New-Item -ItemType Directory -Force -Path $stageRoot | Out-Null
@@ -54,7 +55,17 @@ try {
                 if ($LASTEXITCODE -ne 0) { throw "tar packaging failed for $name" }
             }
             Write-Host "created $archive"
+            $archives += $archive
         }
+
+        $sumFile = Join-Path $resolvedOutput "SHA256SUMS.txt"
+        $sumLines = foreach ($archive in $archives) {
+            $hash = (Get-FileHash -LiteralPath $archive -Algorithm SHA256).Hash.ToLowerInvariant()
+            "$hash  $(Split-Path -Leaf $archive)"
+        }
+        $sumText = ($sumLines -join "`n") + "`n"
+        [System.IO.File]::WriteAllText($sumFile, $sumText, (New-Object System.Text.UTF8Encoding($false)))
+        Write-Host "created $sumFile"
     } finally {
         Remove-Item -LiteralPath $resolvedStage -Recurse -Force -ErrorAction SilentlyContinue
     }
