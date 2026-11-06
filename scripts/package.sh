@@ -40,7 +40,7 @@ for target in windows/amd64 linux/amd64 darwin/arm64; do
   ext=""
   if [[ "$os" == "windows" ]]; then ext=".exe"; fi
   cp "$OUT_DIR/jptranslate-$os-$arch$ext" "$bundle/jptranslate$ext"
-  cp README.md LICENSE THIRD_PARTY_NOTICES.md "$bundle/"
+  cp README.md README.en.md LICENSE THIRD_PARTY_NOTICES.md "$bundle/"
   cp docs/API.md "$bundle/docs/"
   if [[ -d LICENSES ]]; then cp -R LICENSES "$bundle/"; fi
   if [[ "$os" == "windows" && -f scripts/setup.ps1 ]]; then

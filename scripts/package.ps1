@@ -33,7 +33,7 @@ try {
             $ext = if ($target.OS -eq "windows") { ".exe" } else { "" }
             $binary = Join-Path $OutDir ("jptranslate-" + $target.OS + "-" + $target.Arch + $ext)
             Copy-Item $binary (Join-Path $bundle ("jptranslate" + $ext))
-            Copy-Item README.md, LICENSE, THIRD_PARTY_NOTICES.md $bundle
+            Copy-Item README.md, README.en.md, LICENSE, THIRD_PARTY_NOTICES.md $bundle
             Copy-Item (Join-Path "docs" "API.md") (Join-Path $bundle "docs")
             if (Test-Path -LiteralPath "LICENSES") {
                 Copy-Item -LiteralPath "LICENSES" -Destination $bundle -Recurse

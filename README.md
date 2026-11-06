@@ -1,5 +1,7 @@
 # local-jp-translate
 
+日本語 | [English](README.en.md)
+
 PLaMo 3 Translate 0.8B をローカルの `llama-server` で動かし、日本語翻訳を HTTP API と CLI で使うツールです。翻訳処理はこの PC 内で完結します。ゲームやアプリの翻訳データを更新するツールから HTTP 経由で呼び出せます。配布物は Windows 10/11 (amd64)、Linux (amd64)、macOS (arm64) 向けです。CPU で動作し、速度は CPU と `llama-server` のビルドに依存します。
 
 ## Windows でのインストールと起動
